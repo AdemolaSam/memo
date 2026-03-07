@@ -61,14 +61,14 @@ export function HomeNavigator() {
 
       <Tab.Screen
         name="Journal"
-        component={HomeScreen}
+        component={JournalScreen}
         options={{
           tabBarIcon: (props) => (
             <TabIcon {...props} name="book-outline" focusedName="book" />
           ),
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Analytics"
         component={JournalScreen}
         options={{
@@ -76,7 +76,7 @@ export function HomeNavigator() {
             <TabIcon {...props} name="chart-line" focusedName="chart-line" />
           ),
         }}
-      />
+      /> */}
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

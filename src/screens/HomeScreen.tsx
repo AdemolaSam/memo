@@ -8,6 +8,7 @@ import {
   RefreshControl,
   SafeAreaView,
 } from "react-native";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing, typography, borderRadius } from "../theme";
@@ -16,6 +17,7 @@ import { useAuthorization } from "../utils/useAuthorization";
 import { MOCK_TRANSACTIONS } from "../constants/mockData";
 import { RootStackParamList } from "../types/navigation";
 import { NarrationPrompt } from "./NarrationPromptScreen";
+import PrimaryButton from "../components/PrimaryButton";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,6 +25,32 @@ export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { selectedAccount } = useAuthorization();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  const {
+    login,
+    logout,
+    checkExistingAuth,
+    isAuthenticated,
+    isLoading,
+    authState,
+    setAuthState,
+  } = useAuth();
+
+  useEffect(() => {
+    const init = async () => {
+      const hasToken = await checkExistingAuth();
+      if (!hasToken) {
+        setAuthState("idle");
+      }
+    };
+    init();
+  }, []);
+
+  //TODO - WILL REMOVE
+  const handleLogin = async () => {
+    console.log("Login button pressed");
+    await login();
+  };
 
   const handleTransactionPress = useCallback(
     (txHash: string) => {
@@ -52,7 +80,7 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <FlatList
-        data={MOCK_TRANSACTIONS}
+        data={isAuthenticated ? MOCK_TRANSACTIONS : []}
         keyExtractor={(item) => item.txHash}
         renderItem={({ item }) => (
           <TransactionCard
@@ -74,32 +102,73 @@ export function HomeScreen() {
                 <TouchableOpacity style={styles.iconButton}>
                   <Text style={styles.iconButtonText}>🔔</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.avatarButton}>
-                  <Text style={styles.avatarText}>
-                    {walletAddress?.slice(0, 2).toUpperCase() ?? "??"}
+                {isAuthenticated ? (
+                  <TouchableOpacity
+                    style={styles.avatarButton}
+                    onPress={logout}
+                  >
+                    <Text style={styles.avatarText}>
+                      {walletAddress?.slice(0, 2).toUpperCase() ?? "??"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.avatarButton} onPress={login}>
+                    <Text style={styles.avatarText}>--</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {!isAuthenticated ? (
+              /* Not authenticated — show connect prompt */
+              <View style={styles.connectContainer}>
+                <Text style={styles.connectTitle}>Welcome to Memo</Text>
+                <Text style={styles.connectSubtitle}>
+                  Connect your Solana wallet to start annotating your
+                  transactions
+                </Text>
+                <PrimaryButton
+                  label={
+                    authState === "connecting"
+                      ? "Opening Wallet..."
+                      : authState === "signing"
+                        ? "Sign the message..."
+                        : authState === "verifying"
+                          ? "Verifying..."
+                          : "Connect Wallet"
+                  }
+                  onPress={handleLogin}
+                  loading={isLoading}
+                />
+                {authState === "error" && (
+                  <Text style={styles.errorText}>
+                    Authentication failed. Try again.
                   </Text>
-                </TouchableOpacity>
+                )}
               </View>
-            </View>
-
-            {/* Portfolio Card */}
-            <View style={styles.portfolioCard}>
-              <Text style={styles.portfolioLabel}>EST. PORTFOLIO VALUE</Text>
-              <View style={styles.portfolioRow}>
-                <Text style={styles.portfolioValue}>$12,450.00</Text>
-                <View style={styles.changeBadge}>
-                  <Text style={styles.changeText}>↑ 2.4%</Text>
+            ) : (
+              /* Authenticated — show portfolio and journal */
+              <>
+                <View style={styles.portfolioCard}>
+                  <Text style={styles.portfolioLabel}>
+                    EST. PORTFOLIO VALUE
+                  </Text>
+                  <View style={styles.portfolioRow}>
+                    <Text style={styles.portfolioValue}>$12,450.00</Text>
+                    <View style={styles.changeBadge}>
+                      <Text style={styles.changeText}>↑ 2.4%</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
 
-            {/* Section header */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>JOURNAL ACTIVITY</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAll}>View All ›</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>JOURNAL ACTIVITY</Text>
+                  <TouchableOpacity>
+                    <Text style={styles.viewAll}>View All ›</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </>
         }
         contentContainerStyle={styles.listContent}
@@ -267,6 +336,30 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: typography.sm,
     color: colors.textMuted,
+    textAlign: "center",
+  },
+  connectContainer: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.xl * 2,
+    gap: spacing.md,
+  },
+  connectTitle: {
+    fontSize: typography.xxl,
+    fontWeight: "800",
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  connectSubtitle: {
+    fontSize: typography.md,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.sm,
     textAlign: "center",
   },
 });

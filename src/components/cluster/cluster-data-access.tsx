@@ -16,7 +16,7 @@ export enum ClusterNetwork {
   Custom = "custom",
 }
 export function toWalletAdapterNetwork(
-  cluster?: ClusterNetwork
+  cluster?: ClusterNetwork,
 ): WalletAdapterNetwork | undefined {
   switch (cluster) {
     case ClusterNetwork.Mainnet:
@@ -31,6 +31,12 @@ export function toWalletAdapterNetwork(
 }
 
 export const defaultClusters: Readonly<Cluster[]> = [
+  {
+    name: "mainnet-beta",
+    endpoint: "https://mainnet.helius-rpc.com/",
+    network: ClusterNetwork.Mainnet,
+    active: true,
+  },
   {
     name: "devnet",
     endpoint: clusterApiUrl("devnet"),
@@ -51,12 +57,12 @@ export interface ClusterProviderContext {
 }
 
 const Context = createContext<ClusterProviderContext>(
-  {} as ClusterProviderContext
+  {} as ClusterProviderContext,
 );
 
 export function ClusterProvider({ children }: { children: ReactNode }) {
   const [selectedCluster, setSelectedCluster] = useState<Cluster>(
-    defaultClusters[0]
+    defaultClusters[0],
   );
   const clusters = [...defaultClusters];
 
@@ -67,10 +73,10 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
       setSelectedCluster: (cluster: Cluster) => setSelectedCluster(cluster),
       getExplorerUrl: (path: string) =>
         `https://explorer.solana.com/${path}${getClusterUrlParam(
-          selectedCluster
+          selectedCluster,
         )}`,
     }),
-    [selectedCluster, setSelectedCluster]
+    [selectedCluster, setSelectedCluster],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
