@@ -17,6 +17,7 @@
       "bundleIdentifier": "com.solana.mobile.expo.template"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

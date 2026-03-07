@@ -46,3 +46,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+google-services-admin.json
+firebase-adminsdk*.json

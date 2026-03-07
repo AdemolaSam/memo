@@ -19,7 +19,7 @@ export function useTransactions(isAuthenticated: boolean) {
     queryFn: async () => {
       console.log("Fetching for wallet:", walletAddress);
       const data = await fetchTransactions(20);
-      console.log("Raw response:", JSON.stringify(data));
+      //   console.log("Raw response:", JSON.stringify(data));
       const mapped = (data.transactions ?? []).map((tx: any) =>
         mapHeliusTransaction(tx, walletAddress),
       );

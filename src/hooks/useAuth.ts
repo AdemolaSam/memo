@@ -15,6 +15,7 @@ import Constants from "expo-constants";
 
 async function registerPushToken(): Promise<void> {
   // request permission
+  console.log("registerPushToken called");
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== "granted") {
     console.log("Push notification permission denied");
@@ -106,9 +107,17 @@ export function useAuth() {
   const checkExistingAuth = useCallback(async (): Promise<boolean> => {
     const token = await getStoredToken();
     if (token) {
-      // restore axios header on app restart
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setAuthState("authenticated");
+
+      // register push token on session restore too
+      try {
+        console.log("Restoring session — registering push token...");
+        await registerPushToken();
+      } catch (err) {
+        console.warn("Push token registration failed on restore:", err);
+      }
+
       return true;
     }
     return false;
