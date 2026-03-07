@@ -6,12 +6,20 @@ import {
   TouchableOpacity,
   SectionList,
   SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { borderRadius, colors, spacing, typography } from "../theme";
 import PrimaryButton from "../components/PrimaryButton";
-import { Sections } from "../constants/mockData";
 import { JournalRow, JournaledTransaction } from "../components/JournalRow";
+import { useJournal } from "../hooks/useJournal";
+import { useAuth } from "../hooks/useAuth";
+import { exportTransactions } from "../services/transactionApi";
+import { RootStackParamList } from "../types/navigation";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 const DATE_FILTERS = [
   "Last 7 Days",
@@ -27,36 +35,69 @@ const CATEGORY_FILTERS = [
   "Business",
 ];
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export function JournalScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
+  const { isAuthenticated } = useAuth();
+  const { data, isLoading } = useJournal(isAuthenticated);
   const [dateFilter, setDateFilter] = useState("Last 30 Days");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  // derived — recalculates when filters change
   const filteredSections = useMemo(() => {
-    return Sections.map((section) => ({
-      ...section,
-      data: section.data.filter((tx: JournaledTransaction) => {
-        if (
-          categoryFilter !== "All Categories" &&
-          tx.category.toUpperCase() !== categoryFilter.toUpperCase()
-        ) {
-          return false;
-        }
-        if (verifiedOnly && tx.status !== "VERIFIED") return false;
-        return true;
-      }),
-    })).filter((section) => section.data.length > 0);
-  }, [categoryFilter, verifiedOnly]);
+    const sections = data?.sections ?? [];
+    return sections
+      .map((section) => ({
+        ...section,
+        data: section.data.filter((tx: JournaledTransaction) => {
+          if (
+            categoryFilter !== "All Categories" &&
+            tx.category.toUpperCase() !== categoryFilter.toUpperCase()
+          )
+            return false;
+          if (verifiedOnly && tx.status !== "VERIFIED") return false;
+          return true;
+        }),
+      }))
+      .filter((section) => section.data.length > 0);
+  }, [data, categoryFilter, verifiedOnly]);
 
   const totalCount = filteredSections.reduce(
     (acc, s) => acc + s.data.length,
     0,
   );
 
-  const exportToCSV = () => {
-    // TODO: call backend /api/export
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const csvBlob = await exportTransactions();
+
+      // write to local file and share
+      const fileUri = FileSystem.documentDirectory + "memo-export.csv";
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        await FileSystem.writeAsStringAsync(fileUri, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: "Export Memo Transactions",
+        });
+      };
+      reader.readAsDataURL(csvBlob);
+    } catch (err) {
+      console.error("Export failed:", err);
+      Alert.alert("Export Failed", "Could not export transactions. Try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleTransactionPress = (txHash: string) => {
+    navigation.navigate("TransactionDetail", { txHash });
   };
 
   return (
@@ -77,7 +118,7 @@ export function JournalScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Text style={styles.iconButtonText}>🔍</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.exportButton} onPress={exportToCSV}>
+          <TouchableOpacity style={styles.exportButton} onPress={handleExport}>
             <Text style={styles.exportButtonText}>↓ Export</Text>
           </TouchableOpacity>
         </View>
@@ -85,7 +126,6 @@ export function JournalScreen() {
 
       {/* Filters */}
       <View style={styles.filters}>
-        {/* Date filter */}
         <TouchableOpacity
           style={styles.filterPill}
           onPress={() => {
@@ -95,8 +135,6 @@ export function JournalScreen() {
         >
           <Text style={styles.filterText}>📅 {dateFilter} ▾</Text>
         </TouchableOpacity>
-
-        {/* Category filter */}
         <TouchableOpacity
           style={styles.filterPill}
           onPress={() => {
@@ -108,8 +146,6 @@ export function JournalScreen() {
         >
           <Text style={styles.filterText}>⊞ {categoryFilter} ▾</Text>
         </TouchableOpacity>
-
-        {/* Verified filter */}
         <TouchableOpacity
           style={[styles.filterPill, verifiedOnly && styles.filterPillActive]}
           onPress={() => setVerifiedOnly(!verifiedOnly)}
@@ -125,38 +161,49 @@ export function JournalScreen() {
       {/* Summary card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>TOTAL SELECTED</Text>
-          <Text style={styles.summaryValue}>$12,842.50</Text>
+          <Text style={styles.summaryLabel}>ANNOTATED</Text>
+          <Text style={styles.summaryValue}>{data?.total ?? 0} txns</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>TRANSACTION COUNT</Text>
+          <Text style={styles.summaryLabel}>FILTERED</Text>
           <Text style={styles.summaryValue}>{totalCount} items</Text>
         </View>
       </View>
 
-      {/* Transaction list */}
-      <SectionList
-        sections={filteredSections}
-        keyExtractor={(item) => item.txHash}
-        renderItem={({ item }) => (
-          <JournalRow transaction={item} onPress={() => {}} />
-        )}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No transactions found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
-          </View>
-        }
-        stickySectionHeadersEnabled={false}
-      />
+      {isLoading ? (
+        <ActivityIndicator
+          color={colors.primary}
+          style={{ marginTop: spacing.xl }}
+        />
+      ) : (
+        <SectionList
+          sections={filteredSections}
+          keyExtractor={(item) => item.txHash}
+          renderItem={({ item }) => (
+            <JournalRow
+              transaction={item}
+              onPress={() => handleTransactionPress(item.txHash)}
+            />
+          )}
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+            </View>
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No annotated transactions</Text>
+              <Text style={styles.emptySubtext}>
+                Add notes to transactions from the Dashboard
+              </Text>
+            </View>
+          }
+          stickySectionHeadersEnabled={false}
+        />
+      )}
 
       {/* Export footer */}
       <View style={styles.footer}>
@@ -167,8 +214,11 @@ export function JournalScreen() {
           </TouchableOpacity>
         </View>
         <PrimaryButton
-          label={`Export ${totalCount} Transactions`}
-          onPress={exportToCSV}
+          label={
+            exporting ? "Exporting..." : `Export ${totalCount} Transactions`
+          }
+          onPress={handleExport}
+          loading={exporting}
           icon={<Text style={{ color: colors.textPrimary }}>↓</Text>}
         />
       </View>

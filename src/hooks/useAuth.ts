@@ -109,15 +109,6 @@ export function useAuth() {
     if (token) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setAuthState("authenticated");
-
-      // register push token on session restore too
-      try {
-        console.log("Restoring session — registering push token...");
-        await registerPushToken();
-      } catch (err) {
-        console.warn("Push token registration failed on restore:", err);
-      }
-
       return true;
     }
     return false;

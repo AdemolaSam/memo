@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Linking,
+  ActivityIndicator,
 } from "react-native";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { borderRadius, colors, spacing, typography } from "../theme";
@@ -16,46 +18,134 @@ import PrimaryButton from "../components/PrimaryButton";
 import ViewerRow from "../components/ViewerRow";
 import MetaRow from "../components/MetaRow";
 import CategorySelector from "../components/CategorySelector";
-import { MOCK_TRANSACTIONS } from "../constants/mockData";
 import { RootStackParamList } from "../types/navigation";
+import { useTransaction } from "../hooks/useTransaction";
+import {
+  saveNarration,
+  updateNarration,
+  notarize,
+  addViewer,
+  removeViewer,
+} from "../services/transactionApi";
+import { useQueryClient } from "@tanstack/react-query";
+import * as crypto from "expo-crypto";
 
 export function TransactionDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "TransactionDetail">>();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { txHash } = route.params;
 
-  const txDetails = MOCK_TRANSACTIONS.find((i) => i.txHash === txHash);
+  const { data: tx, isLoading } = useTransaction(txHash);
 
-  const [note, setNote] = useState<string>(txDetails?.note ?? "");
-  const [category, setCategory] = useState<string>(txDetails?.category ?? "");
-  const [viewers, setViewers] = useState<string[]>([
-    "7xWp...9K2m",
-    "Ax3y...Lp0q",
-  ]);
+  const [note, setNote] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
+  const [viewers, setViewers] = useState<string[]>([]);
+  const [newViewerWallet, setNewViewerWallet] = useState<string>("");
+  const [showViewerInput, setShowViewerInput] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notarizing, setNotarizing] = useState(false);
 
-  const handleRemoveViewer = (walletAddress: string) => {
-    setViewers((prev) => prev.filter((v) => v !== walletAddress));
+  // populate state from fetched tx
+  React.useEffect(() => {
+    if (tx) {
+      setNote(tx.narration?.encryptedText ?? "");
+      setCategory(tx.narration?.category ?? "");
+      setViewers(tx.narration?.viewers?.map((v: any) => v.viewerWallet) ?? []);
+    }
+  }, [tx]);
+
+  const handleSaveNarration = async () => {
+    if (!note && !category) return;
+    try {
+      setSaving(true);
+      if (tx?.narration) {
+        await updateNarration(txHash, note, category);
+      } else {
+        await saveNarration(txHash, note, category);
+      }
+      queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    } catch (err) {
+      console.error("Save narration failed:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleAddViewer = () => {
-    // TODO: open input modal to add viewer wallet address
+  const handleNotarize = async () => {
+    if (!note) {
+      return;
+    }
+    try {
+      setNotarizing(true);
+      // compute SHA-256 hash of the note client-side
+      const hash = await crypto.digestStringAsync(
+        crypto.CryptoDigestAlgorithm.SHA256,
+        note,
+      );
+      await notarize(txHash, hash);
+      queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
+    } catch (err) {
+      console.error("Notarize failed:", err);
+    } finally {
+      setNotarizing(false);
+    }
   };
 
-  const handleNotarize = () => {
-    // TODO: construct memo transaction and sign via MWA
+  const handleAddViewer = async () => {
+    if (!newViewerWallet.trim()) return;
+    try {
+      await addViewer(txHash, newViewerWallet.trim(), note);
+      setViewers((prev) => [...prev, newViewerWallet.trim()]);
+      setNewViewerWallet("");
+      setShowViewerInput(false);
+    } catch (err) {
+      console.error("Add viewer failed:", err);
+    }
+  };
+
+  const handleRemoveViewer = async (walletAddress: string) => {
+    try {
+      await removeViewer(txHash, walletAddress);
+      setViewers((prev) => prev.filter((v) => v !== walletAddress));
+    } catch (err) {
+      console.error("Remove viewer failed:", err);
+    }
   };
 
   const handleShareReceipt = () => {
     navigation.navigate("ShareReceipt", { txHash } as never);
   };
 
-  if (!txDetails) {
+  const handleSolscan = () => {
+    Linking.openURL(`https://solscan.io/tx/${txHash}`);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ActivityIndicator
+          color={colors.primary}
+          style={{ marginTop: spacing.xl }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (!tx) {
     return (
       <SafeAreaView style={styles.screen}>
         <Text style={styles.errorText}>Transaction not found</Text>
       </SafeAreaView>
     );
   }
+
+  const fee = tx.fee ? (tx.fee / 1e9).toFixed(6) : "N/A";
+  const date = tx.timestamp
+    ? new Date(tx.timestamp * 1000).toLocaleString()
+    : "N/A";
+  const isNotarized = tx.narration?.isNotarized ?? false;
 
   return (
     <KeyboardAvoidingView
@@ -85,24 +175,47 @@ export function TransactionDetailScreen() {
         >
           {/* Status */}
           <View style={styles.statusRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>CONFIRMED</Text>
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor: tx.transactionError
+                    ? colors.error
+                    : colors.success,
+                },
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: tx.transactionError ? colors.error : colors.success },
+              ]}
+            >
+              {tx.transactionError ? "FAILED" : "CONFIRMED"}
+            </Text>
+            {isNotarized && (
+              <View style={styles.notarizedBadge}>
+                <Text style={styles.notarizedBadgeText}>🛡 NOTARIZED</Text>
+              </View>
+            )}
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{txDetails.description}</Text>
+          <Text style={styles.description}>
+            {tx.description || "Unknown Transaction"}
+          </Text>
           <Text style={styles.network}>Completed on Solana Mainnet-Beta</Text>
 
           {/* Meta info box */}
           <View style={styles.metaBox}>
-            <MetaRow label="Network Fee" value="0.000005 SOL" />
+            <MetaRow label="Network Fee" value={`${fee} SOL`} />
+            <MetaRow label="Timestamp" value={date} />
             <MetaRow
-              label="Program Used"
-              value="Jupiter AG"
+              label="Signature"
+              value={`${txHash.slice(0, 8)}...${txHash.slice(-8)}`}
               externalLink
-              onPress={() => {}}
+              onPress={handleSolscan}
             />
-            <MetaRow label="Timestamp" value={txDetails.date} />
           </View>
 
           {/* Category */}
@@ -124,30 +237,56 @@ export function TransactionDetailScreen() {
                 style={styles.input}
                 textAlignVertical="top"
               />
-              <TouchableOpacity style={styles.editIcon}>
-                <Text style={styles.editIconText}>✎</Text>
+              <TouchableOpacity
+                style={styles.editIcon}
+                onPress={handleSaveNarration}
+                disabled={saving}
+              >
+                <Text style={styles.editIconText}>{saving ? "..." : "✎"}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
+          {/* Save button */}
+          {(note || category) && (
+            <PrimaryButton
+              label={saving ? "Saving..." : "Save Note"}
+              onPress={handleSaveNarration}
+              loading={saving}
+              variant="outlined"
+            />
+          )}
+
           {/* Notarize */}
           <TouchableOpacity
-            style={styles.notarizeRow}
+            style={[
+              styles.notarizeRow,
+              isNotarized && { borderColor: colors.success + "40" },
+            ]}
             onPress={handleNotarize}
             activeOpacity={0.7}
+            disabled={notarizing || isNotarized || !note}
           >
             <View style={styles.notarizeLeft}>
               <View style={styles.notarizeIcon}>
                 <Text style={styles.notarizeIconText}>🛡</Text>
               </View>
               <View>
-                <Text style={styles.notarizeTitle}>Notarize</Text>
+                <Text style={styles.notarizeTitle}>
+                  {isNotarized ? "Notarized ✓" : "Notarize"}
+                </Text>
                 <Text style={styles.notarizeSubtitle}>
-                  Write a tamper-proof hash on-chain
+                  {isNotarized
+                    ? "Hash written on-chain"
+                    : "Write a tamper-proof hash on-chain"}
                 </Text>
               </View>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            {notarizing ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={styles.chevron}>›</Text>
+            )}
           </TouchableOpacity>
 
           {/* Viewers */}
@@ -162,17 +301,43 @@ export function TransactionDetailScreen() {
                 />
               ))}
             </View>
+
+            {showViewerInput && (
+              <View style={styles.viewerInputRow}>
+                <TextInput
+                  value={newViewerWallet}
+                  onChangeText={setNewViewerWallet}
+                  placeholder="Wallet address"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.viewerInput}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.viewerAddConfirm}
+                  onPress={handleAddViewer}
+                >
+                  <Text style={styles.viewerAddConfirmText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <TouchableOpacity
               style={styles.addViewerButton}
-              onPress={handleAddViewer}
+              onPress={() => setShowViewerInput(!showViewerInput)}
               activeOpacity={0.7}
             >
-              <Text style={styles.addViewerText}>+ Add Viewer</Text>
+              <Text style={styles.addViewerText}>
+                {showViewerInput ? "Cancel" : "+ Add Viewer"}
+              </Text>
             </TouchableOpacity>
           </View>
 
           {/* View on Solscan */}
-          <TouchableOpacity style={styles.solscanRow} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.solscanRow}
+            activeOpacity={0.7}
+            onPress={handleSolscan}
+          >
             <Text style={styles.solscanIcon}>🗄</Text>
             <Text style={styles.solscanText}>View on Solscan</Text>
             <Text style={styles.chevron}>›</Text>
@@ -384,5 +549,43 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     marginTop: spacing.xl,
+  },
+  notarizedBadge: {
+    backgroundColor: colors.success + "20",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    marginLeft: spacing.sm,
+  },
+  notarizedBadgeText: {
+    color: colors.success,
+    fontSize: typography.xs,
+    fontWeight: "600",
+  },
+  viewerInputRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
+  },
+  viewerInput: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    fontSize: typography.sm,
+  },
+  viewerAddConfirm: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  viewerAddConfirmText: {
+    color: colors.textPrimary,
+    fontWeight: "600",
+    fontSize: typography.sm,
   },
 });
