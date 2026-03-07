@@ -9,6 +9,34 @@ import {
 } from "../services/authApi";
 import bs58 from "bs58";
 
+import * as Notifications from "expo-notifications";
+import { api } from "../services/api";
+import Constants from "expo-constants";
+
+async function registerPushToken(): Promise<void> {
+  // request permission
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") {
+    console.log("Push notification permission denied");
+    return;
+  }
+
+  // get Expo push token
+
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId:
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      "592e386d-a882-4065-b592-9bab3e5fce1d",
+  });
+
+  const pushToken = tokenData.data;
+  console.log("Push token:", pushToken);
+
+  // send to backend
+  await api.post("/webhook/push-token", { pushToken });
+  console.log("Push token registered with backend");
+}
+
 type AuthState =
   | "idle"
   | "connecting"
@@ -50,6 +78,14 @@ export function useAuth() {
       console.log("Step 8: Authenticated!");
 
       setAuthState("authenticated");
+
+      // register push token after successful auth
+      try {
+        await registerPushToken();
+      } catch (err) {
+        // non-critical — don't fail auth if push token fails
+        console.warn("Push token registration failed:", err);
+      }
     } catch (err: any) {
       console.error("Auth error full:", JSON.stringify(err?.response?.data));
       console.error("Auth error status:", err?.response?.status);
@@ -70,6 +106,8 @@ export function useAuth() {
   const checkExistingAuth = useCallback(async (): Promise<boolean> => {
     const token = await getStoredToken();
     if (token) {
+      // restore axios header on app restart
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setAuthState("authenticated");
       return true;
     }

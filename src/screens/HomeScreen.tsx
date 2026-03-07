@@ -17,7 +17,20 @@ import { useAuthorization } from "../utils/useAuthorization";
 import { MOCK_TRANSACTIONS } from "../constants/mockData";
 import { RootStackParamList } from "../types/navigation";
 import { NarrationPrompt } from "./NarrationPromptScreen";
+import { useTransactions } from "../hooks/useTransactions";
 import PrimaryButton from "../components/PrimaryButton";
+import * as Notifications from "expo-notifications";
+
+// notification handler configuration
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+// Inside HomeScreen component
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +38,8 @@ export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { selectedAccount } = useAuthorization();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [promptTxHash, setPromptTxHash] = useState<string>("");
+  const [promptDescription, setPromptDescription] = useState<string>("");
 
   const {
     login,
@@ -46,11 +61,34 @@ export function HomeScreen() {
     init();
   }, []);
 
+  useEffect(() => {
+    // handle notification tap — open NarrationPrompt
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        if (data?.screen === "NarrationPrompt" && data?.txHash) {
+          setPromptTxHash(data.txHash);
+          setPromptDescription(data.description ?? "");
+          setShowNarrationPrompt(true);
+        }
+      },
+    );
+
+    return () => subscription.remove();
+  }, []);
+
   //TODO - WILL REMOVE
   const handleLogin = async () => {
     console.log("Login button pressed");
     await login();
   };
+  //fetching transactions
+  const {
+    data,
+    isLoading: txLoading,
+    refetch,
+  } = useTransactions(isAuthenticated);
+  const transactions = data?.transactions ?? [];
 
   const handleTransactionPress = useCallback(
     (txHash: string) => {
@@ -69,18 +107,10 @@ export function HomeScreen() {
 
   const [showNarrationPrompt, setShowNarrationPrompt] = useState(false);
 
-  // simulate push notification after 3 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowNarrationPrompt(true);
-    }, 3000);
-    return () => clearTimeout(timer); // cleanup on unmount
-  }, []);
-
   return (
     <SafeAreaView style={styles.screen}>
       <FlatList
-        data={isAuthenticated ? MOCK_TRANSACTIONS : []}
+        data={transactions}
         keyExtractor={(item) => item.txHash}
         renderItem={({ item }) => (
           <TransactionCard
@@ -175,8 +205,8 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={txLoading}
+            onRefresh={refetch}
             tintColor={colors.primary}
           />
         }
@@ -190,13 +220,22 @@ export function HomeScreen() {
         }
       />
 
-      <NarrationPrompt
+      {/* <NarrationPrompt
         visible={showNarrationPrompt}
         onDismiss={() => setShowNarrationPrompt(false)}
         txDescription="You swapped 10.5 SOL for 2,500 USDC via Jupiter"
         onSave={(note, category, notarize) => {
           console.log("Saved:", { note, category, notarize });
           // TODO: call backend API to save narration
+        }}
+      /> */}
+      <NarrationPrompt
+        visible={showNarrationPrompt}
+        onDismiss={() => setShowNarrationPrompt(false)}
+        txDescription={promptDescription}
+        onSave={(note, category, notarize) => {
+          console.log("Saved:", { note, category, notarize });
+          // TODO: wire to backend
         }}
       />
     </SafeAreaView>

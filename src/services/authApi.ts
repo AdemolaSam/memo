@@ -19,6 +19,9 @@ export async function verifySignature(
   });
   const token = response.data.token;
   await SecureStore.setItemAsync("jwt_token", token);
+
+  // set immediately on axios instance so next requests use it right away
+  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   return token;
 }
 
