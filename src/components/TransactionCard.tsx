@@ -1,6 +1,15 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { colors, spacing, typography, borderRadius } from "../theme";
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  RefreshCw,
+  ImageIcon,
+  Layers,
+  CircleDot,
+  AlignLeft,
+} from "lucide-react-native";
+import { borderRadius, colors, spacing, typography } from "../theme";
 import CategoryBadge from "./CategoryBadge";
 
 export type TransactionType =
@@ -25,16 +34,6 @@ export interface Transaction {
   counterparty?: string;
 }
 
-// map transaction type to an emoji icon
-const TYPE_ICON: Record<TransactionType, string> = {
-  SWAP: "⇄",
-  TRANSFER: "↗",
-  NFT_MINT: "◈",
-  NFT_SALE: "◈",
-  STAKE: "⬡",
-  UNKNOWN: "•",
-};
-
 const TYPE_ICON_BG: Record<TransactionType, string> = {
   SWAP: "#2D1B4E",
   TRANSFER: "#1A2E1A",
@@ -43,6 +42,34 @@ const TYPE_ICON_BG: Record<TransactionType, string> = {
   STAKE: "#1E3A5F",
   UNKNOWN: "#1F2937",
 };
+
+function TypeIcon({
+  type,
+  isIncoming,
+}: {
+  type: TransactionType;
+  isIncoming: boolean;
+}) {
+  const size = 18;
+  const color = colors.textPrimary;
+  switch (type) {
+    case "SWAP":
+      return <RefreshCw size={size} color={color} />;
+    case "TRANSFER":
+      return isIncoming ? (
+        <ArrowDownLeft size={size} color={colors.success} />
+      ) : (
+        <ArrowUpRight size={size} color={color} />
+      );
+    case "NFT_MINT":
+    case "NFT_SALE":
+      return <ImageIcon size={size} color={color} />;
+    case "STAKE":
+      return <Layers size={size} color={color} />;
+    default:
+      return <CircleDot size={size} color={color} />;
+  }
+}
 
 type Props = {
   transaction: Transaction;
@@ -69,17 +96,15 @@ export default function TransactionCard({ transaction, onPress }: Props) {
       activeOpacity={0.75}
     >
       <View style={styles.row}>
-        {/* Type icon */}
         <View
           style={[
             styles.iconContainer,
             { backgroundColor: TYPE_ICON_BG[type] },
           ]}
         >
-          <Text style={styles.icon}>{TYPE_ICON[type]}</Text>
+          <TypeIcon type={type} isIncoming={isIncoming} />
         </View>
 
-        {/* Center content */}
         <View style={styles.center}>
           <Text style={styles.description} numberOfLines={2}>
             {description}
@@ -88,15 +113,14 @@ export default function TransactionCard({ transaction, onPress }: Props) {
             <Text style={styles.date}>{date}</Text>
             {category && (
               <>
-                <Text style={styles.dot}>•</Text>
+                <Text style={styles.dot}>·</Text>
                 <CategoryBadge category={category} size="sm" />
               </>
             )}
           </View>
-          {/* Note preview */}
           {note ? (
             <View style={styles.noteRow}>
-              <Text style={styles.noteIcon}>≡</Text>
+              <AlignLeft size={12} color={colors.textMuted} />
               <Text style={styles.noteText} numberOfLines={1}>
                 "{note}"
               </Text>
@@ -107,14 +131,13 @@ export default function TransactionCard({ transaction, onPress }: Props) {
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
               <View style={styles.noteRow}>
-                <Text style={styles.noteIcon}>≡</Text>
+                <AlignLeft size={12} color={colors.textMuted} />
                 <Text style={styles.addNoteText}>Add note...</Text>
               </View>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Amount */}
         <Text
           style={[
             styles.amount,
@@ -126,7 +149,6 @@ export default function TransactionCard({ transaction, onPress }: Props) {
         </Text>
       </View>
 
-      {/* NFT thumbnail */}
       {nftImageUrl && (
         <Image
           source={{ uri: nftImageUrl }}
@@ -146,84 +168,40 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.sm,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.md,
-  },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.md,
     justifyContent: "center",
     alignItems: "center",
-    flexShrink: 0,
   },
-  icon: {
-    fontSize: typography.lg,
-    color: colors.textPrimary,
-  },
-  center: {
-    flex: 1,
-    gap: spacing.xs,
-  },
+  center: { flex: 1, gap: 4 },
   description: {
-    fontSize: typography.sm,
     color: colors.textPrimary,
-    fontWeight: "500",
+    fontSize: typography.md,
+    fontWeight: "600",
     lineHeight: 20,
   },
-  meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    flexWrap: "wrap",
-  },
-  date: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-  },
-  dot: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-  },
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  noteIcon: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-  },
+  meta: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  date: { color: colors.textMuted, fontSize: typography.xs },
+  dot: { color: colors.textMuted, fontSize: typography.xs },
+  noteRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   noteText: {
+    color: colors.textMuted,
     fontSize: typography.xs,
-    color: colors.textSecondary,
     fontStyle: "italic",
     flex: 1,
   },
-  addNoteText: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-  },
-  amount: {
-    fontSize: typography.md,
-    fontWeight: "700",
-    flexShrink: 0,
-  },
-  amountIncoming: {
-    color: colors.success,
-  },
-  amountOutgoing: {
-    color: colors.textPrimary,
-  },
+  addNoteText: { color: colors.textMuted, fontSize: typography.xs },
+  amount: { fontSize: typography.md, fontWeight: "700", marginTop: 2 },
+  amountIncoming: { color: colors.success },
+  amountOutgoing: { color: colors.textPrimary },
   nftImage: {
-    width: 120,
-    height: 100,
+    width: "100%",
+    height: 160,
     borderRadius: borderRadius.sm,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
 });

@@ -12,6 +12,14 @@ import {
   Linking,
   ActivityIndicator,
 } from "react-native";
+import {
+  ArrowLeft,
+  MoreVertical,
+  ExternalLink,
+  Shield,
+  CheckCircle,
+  Edit3,
+} from "lucide-react-native";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { borderRadius, colors, spacing, typography } from "../theme";
 import PrimaryButton from "../components/PrimaryButton";
@@ -29,6 +37,7 @@ import {
 } from "../services/transactionApi";
 import { useQueryClient } from "@tanstack/react-query";
 import * as crypto from "expo-crypto";
+import { Toast, useToast } from "../components/Toast";
 
 export function TransactionDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "TransactionDetail">>();
@@ -45,6 +54,7 @@ export function TransactionDetailScreen() {
   const [showViewerInput, setShowViewerInput] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notarizing, setNotarizing] = useState(false);
+  const { show, hide, toast } = useToast();
 
   // populate state from fetched tx
   React.useEffect(() => {
@@ -66,8 +76,10 @@ export function TransactionDetailScreen() {
       }
       queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      show("Narration Added!", "success");
     } catch (err) {
       console.error("Save narration failed:", err);
+      show("Failed to save narration", "error");
     } finally {
       setSaving(false);
     }
@@ -86,8 +98,10 @@ export function TransactionDetailScreen() {
       );
       await notarize(txHash, hash);
       queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
+      show("Notarized!!", "success");
     } catch (err) {
       console.error("Notarize failed:", err);
+      show("Failed to notarize", "error");
     } finally {
       setNotarizing(false);
     }
@@ -100,8 +114,10 @@ export function TransactionDetailScreen() {
       setViewers((prev) => [...prev, newViewerWallet.trim()]);
       setNewViewerWallet("");
       setShowViewerInput(false);
+      show("Viewer added", "success");
     } catch (err) {
       console.error("Add viewer failed:", err);
+      show("Failed to add viewer", "error");
     }
   };
 
@@ -109,8 +125,10 @@ export function TransactionDetailScreen() {
     try {
       await removeViewer(txHash, walletAddress);
       setViewers((prev) => prev.filter((v) => v !== walletAddress));
+      show("Viewer removed", "success");
     } catch (err) {
       console.error("Remove viewer failed:", err);
+      show("Failed to remove viewer", "error");
     }
   };
 
@@ -153,6 +171,12 @@ export function TransactionDetailScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <SafeAreaView style={styles.screen}>
+        <Toast
+          visible={toast.visible}
+          message={toast.message}
+          type={toast.type}
+          onHide={hide}
+        />
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -160,11 +184,11 @@ export function TransactionDetailScreen() {
             style={styles.backButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction Detail</Text>
           <TouchableOpacity style={styles.moreButton}>
-            <Text style={styles.moreIcon}>⋮</Text>
+            <MoreVertical size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -195,7 +219,9 @@ export function TransactionDetailScreen() {
             </Text>
             {isNotarized && (
               <View style={styles.notarizedBadge}>
-                <Text style={styles.notarizedBadgeText}>🛡 NOTARIZED</Text>
+                <Shield size={18} color={colors.primary} />
+
+                <Text style={styles.notarizedBadgeText}>NOTARIZED</Text>
               </View>
             )}
           </View>
@@ -242,6 +268,7 @@ export function TransactionDetailScreen() {
                 onPress={handleSaveNarration}
                 disabled={saving}
               >
+                <Edit3 size={16} color={colors.textMuted} />
                 <Text style={styles.editIconText}>{saving ? "..." : "✎"}</Text>
               </TouchableOpacity>
             </View>
@@ -338,7 +365,7 @@ export function TransactionDetailScreen() {
             activeOpacity={0.7}
             onPress={handleSolscan}
           >
-            <Text style={styles.solscanIcon}>🗄</Text>
+            <ExternalLink size={18} color={colors.textSecondary} />
             <Text style={styles.solscanText}>View on Solscan</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>

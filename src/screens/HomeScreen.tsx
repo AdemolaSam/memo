@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Bell, Settings, ArrowUpRight, Wallet } from "lucide-react-native";
+
 import {
   View,
   Text,
@@ -130,8 +132,9 @@ export function HomeScreen() {
               </View>
               <View style={styles.topBarRight}>
                 <TouchableOpacity style={styles.iconButton}>
-                  <Text style={styles.iconButtonText}>🔔</Text>
+                  <Bell size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
+
                 {isAuthenticated ? (
                   <TouchableOpacity
                     style={styles.avatarButton}
@@ -143,7 +146,7 @@ export function HomeScreen() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.avatarButton} onPress={login}>
-                    <Text style={styles.avatarText}>--</Text>
+                    <Wallet size={16} color={colors.textPrimary} />
                   </TouchableOpacity>
                 )}
               </View>

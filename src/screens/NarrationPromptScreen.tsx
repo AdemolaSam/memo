@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Shield, Save, Clock } from "lucide-react-native";
 import {
   View,
   Text,
@@ -80,20 +81,23 @@ export function NarrationPrompt({
 
           {/* Buttons */}
           <View style={styles.buttons}>
+            // In the buttons section replace:
             <PrimaryButton
               label="Save & Notarize"
               onPress={handleSaveAndNotarize}
-              icon={<Text style={{ color: colors.textPrimary }}>🛡</Text>}
+              icon={<Shield size={16} color={colors.textPrimary} />}
             />
             <PrimaryButton
               label="Save Only"
               variant="outlined"
               onPress={handleSaveOnly}
+              icon={<Save size={16} color={colors.primary} />}
             />
             <TouchableOpacity
               onPress={handleRemindLater}
               style={styles.remindLater}
             >
+              <Clock size={14} color={colors.textMuted} />
               <Text style={styles.remindLaterText}>Remind me later</Text>
             </TouchableOpacity>
           </View>
@@ -161,6 +165,8 @@ const styles = StyleSheet.create({
   remindLater: {
     alignItems: "center",
     paddingVertical: spacing.sm,
+    flexDirection: "row",
+    gap: spacing.xs,
   },
   remindLaterText: {
     fontSize: typography.sm,

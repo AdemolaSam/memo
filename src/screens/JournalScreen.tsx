@@ -9,6 +9,14 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import {
+  Search,
+  Download,
+  Calendar,
+  Grid,
+  CheckSquare,
+} from "lucide-react-native";
+
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { borderRadius, colors, spacing, typography } from "../theme";
@@ -116,10 +124,11 @@ export function JournalScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.iconButtonText}>🔍</Text>
+            <Search size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.exportButton} onPress={handleExport}>
-            <Text style={styles.exportButtonText}>↓ Export</Text>
+            <Download size={14} color={colors.textPrimary} />
+            <Text style={styles.exportButtonText}>Export</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -133,7 +142,7 @@ export function JournalScreen() {
             setDateFilter(DATE_FILTERS[(idx + 1) % DATE_FILTERS.length]);
           }}
         >
-          <Text style={styles.filterText}>📅 {dateFilter} ▾</Text>
+          <Calendar size={12} color={colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.filterPill}
@@ -144,16 +153,20 @@ export function JournalScreen() {
             );
           }}
         >
-          <Text style={styles.filterText}>⊞ {categoryFilter} ▾</Text>
+          <Grid size={12} color={colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterPill, verifiedOnly && styles.filterPillActive]}
           onPress={() => setVerifiedOnly(!verifiedOnly)}
         >
+          <CheckSquare
+            size={12}
+            color={verifiedOnly ? colors.primary : colors.textSecondary}
+          />
           <Text
             style={[styles.filterText, verifiedOnly && styles.filterTextActive]}
           >
-            ✓ Verified
+            Verified
           </Text>
         </TouchableOpacity>
       </View>
