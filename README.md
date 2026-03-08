@@ -22,6 +22,16 @@ This template is a ready-to-go Android Expo dApp that offers:
   </tr>
 </table>
 
+## Download & Test
+
+[Download APK (v1.0.0-beta)](https://github.com/AdemolaSam/memo/releases/latest)
+
+**Requirements:**
+
+- Android device with Phantom wallet installed
+- Enable "Install from unknown sources" in Android settings
+- Solana mainnet wallet with some transaction history
+
 ## Tech Stack
 
 | Library               | Category          | Version | Description                                           |

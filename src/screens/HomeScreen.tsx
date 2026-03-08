@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Bell, Settings, ArrowUpRight, Wallet } from "lucide-react-native";
 import { usePortfolio } from "../hooks/usePortfolio";
+import { Image } from "react-native";
 
 import {
   View,
@@ -147,9 +148,11 @@ export function HomeScreen() {
             {/* Top Bar */}
             <View style={styles.topBar}>
               <View style={styles.logoRow}>
-                <View style={styles.logoIcon}>
-                  <Text style={styles.logoText}>M</Text>
-                </View>
+                <Image
+                  source={require("../../assets/icon.png")}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
                 <Text style={styles.appName}>Memo</Text>
               </View>
               <View style={styles.topBarRight}>
@@ -319,6 +322,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: typography.xl,
     fontWeight: "700",
+  },
+  logoImage: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.sm,
   },
   topBarRight: {
     flexDirection: "row",
