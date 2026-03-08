@@ -81,7 +81,6 @@ export function NarrationPrompt({
 
           {/* Buttons */}
           <View style={styles.buttons}>
-            // In the buttons section replace:
             <PrimaryButton
               label="Save & Notarize"
               onPress={handleSaveAndNotarize}
