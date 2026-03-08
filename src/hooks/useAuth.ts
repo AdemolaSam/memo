@@ -88,6 +88,12 @@ export function useAuth() {
         // non-critical — don't fail auth if push token fails
         console.warn("Push token registration failed:", err);
       }
+      try {
+        await api.post("/webhook/register", { walletAddress });
+        console.log("Webhook registered for:", walletAddress);
+      } catch (err) {
+        console.warn("Webhook registration failed:", err);
+      }
     } catch (err: any) {
       console.error("Auth error full:", JSON.stringify(err?.response?.data));
       console.error("Auth error status:", err?.response?.status);

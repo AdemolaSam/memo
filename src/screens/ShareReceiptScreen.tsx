@@ -18,6 +18,8 @@ import { useEncryption } from "../hooks/useEncryption";
 import { decryptNote } from "../utils/encryption";
 import { RootStackParamList } from "../types/navigation";
 import { useAuth } from "../hooks/useAuth";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 
 type RoutePropType = RouteProp<RootStackParamList, "ShareReceipt">;
 
@@ -31,6 +33,8 @@ export function ShareReceiptScreen() {
   const [decryptedNote, setDecryptedNote] = React.useState<
     string | undefined
   >();
+
+  const receiptRef = useRef<ViewShot>(null);
 
   // decrypt note if exists
   React.useEffect(() => {
@@ -50,15 +54,19 @@ export function ShareReceiptScreen() {
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `Memo Receipt\n\n${tx?.description ?? ""}\n\nVerify on Solscan:\nhttps://solscan.io/tx/${txHash}`,
-        url: `https://solscan.io/tx/${txHash}`,
+      const uri = await captureRef(receiptRef, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+      });
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        dialogTitle: "Share Memo Receipt",
       });
     } catch (err) {
       console.error("Share failed:", err);
     }
   };
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -111,21 +119,20 @@ export function ShareReceiptScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <ShareReceipt
-          txHash={txHash}
-          description={tx.description ?? "Transaction"}
-          amount={solAmount}
-          amountUsd={usdAmount}
-          date={date}
-          category={tx.narration?.category}
-          isNotarized={tx.narration?.isNotarized}
-          notarizationTx={tx.narration?.notarization?.memoTxHash}
-          note={decryptedNote}
-        />
+      <ScrollView contentContainerStyle={styles.content}>
+        <ViewShot ref={receiptRef} options={{ format: "png", quality: 1 }}>
+          <ShareReceipt
+            txHash={txHash}
+            description={tx.description ?? "Transaction"}
+            amount={solAmount}
+            amountUsd={usdAmount}
+            date={date}
+            category={tx.narration?.category}
+            isNotarized={tx.narration?.isNotarized}
+            notarizationTx={tx.narration?.notarization?.memoTxHash}
+            note={decryptedNote}
+          />
+        </ViewShot>
       </ScrollView>
 
       {/* Footer */}

@@ -6,6 +6,8 @@ import { colors, typography, spacing } from "../theme";
 import { HomeScreen } from "../screens/HomeScreen";
 import { JournalScreen } from "../screens/JournalScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
+import { SharedWithMeScreen } from "../screens/SharedWithMeScreen";
+import { Users } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
 
@@ -68,15 +70,14 @@ export function HomeNavigator() {
           ),
         }}
       />
-      {/* <Tab.Screen
-        name="Analytics"
-        component={JournalScreen}
+      <Tab.Screen
+        name="Shared"
+        component={SharedWithMeScreen}
         options={{
-          tabBarIcon: (props) => (
-            <TabIcon {...props} name="chart-line" focusedName="chart-line" />
-          ),
+          tabBarLabel: "Shared",
+          tabBarIcon: ({ color }) => <Users size={22} stroke={color} />,
         }}
-      /> */}
+      />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

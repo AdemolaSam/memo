@@ -5,3 +5,4 @@ export * from "./SettingsScreen";
 export * from "./TransactionDetailScreen";
 export * from "./ShareReceiptScreen";
 export * from "./NarrationPromptScreen";
+export * from "./SharedWithMeScreen";

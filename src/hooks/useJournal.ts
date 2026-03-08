@@ -11,35 +11,37 @@ async function fetchNarrations() {
   // only return transactions that have narrations
   const journaled: JournaledTransaction[] = transactions
     .filter((tx: any) => tx.narration)
-    .map((tx: any) => ({
-      txHash: tx.signature,
-      category: tx.narration?.category ?? "Uncategorized",
-      status: tx.narration?.isNotarized ? "VERIFIED" : "PENDING",
-      amount: tx.nativeTransfers?.[0]?.amount
-        ? `${(tx.nativeTransfers[0].amount / 1e9).toFixed(4)} SOL`
-        : "N/A",
-      isIncoming: false,
-      date: tx.timestamp
-        ? new Date(tx.timestamp * 1000).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "N/A",
-      note: tx.narration?.encryptedText ?? "",
-      description: tx.description ?? "Unknown Transaction",
-    }));
+    .map((tx: any) => {
+      const timestamp = tx.timestamp * 1000;
+      const date = new Date(timestamp);
+      const monthKey = date.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+      return {
+        txHash: tx.signature,
+        category: tx.narration?.category ?? "Uncategorized",
+        status: tx.narration?.isNotarized ? "VERIFIED" : "PENDING",
+        amount: tx.nativeTransfers?.[0]?.amount
+          ? `${(tx.nativeTransfers[0].amount / 1e9).toFixed(4)} SOL`
+          : "N/A",
+        isIncoming: false,
+        date: date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        monthKey, // attach for grouping
+        note: tx.narration?.encryptedText ?? "",
+        description: tx.description ?? "Unknown Transaction",
+      };
+    });
 
-  // group by month
+  // group by monthKey
   const groups: Record<string, JournaledTransaction[]> = {};
   journaled.forEach((tx: any) => {
-    const key = tx.date.split(" ").slice(0, 2).join(" "); // "Mar 7"
-    const monthKey = new Date(tx.date).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-    if (!groups[monthKey]) groups[monthKey] = [];
-    groups[monthKey].push(tx);
+    if (!groups[tx.monthKey]) groups[tx.monthKey] = [];
+    groups[tx.monthKey].push(tx);
   });
 
   const sections = Object.entries(groups).map(([title, data]) => ({

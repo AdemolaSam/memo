@@ -5,7 +5,10 @@ export async function fetchTransactions(
   paginationToken?: string,
 ) {
   const response = await api.get("/transactions", {
-    params: { limit, paginationToken },
+    params: {
+      limit,
+      ...(paginationToken ? { paginationToken } : {}),
+    },
   });
   return response.data;
 }

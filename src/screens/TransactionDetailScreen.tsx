@@ -40,6 +40,8 @@ import * as crypto from "expo-crypto";
 import { Toast, useToast } from "../components/Toast";
 import { useEncryption } from "../hooks/useEncryption";
 import { encryptNote, decryptNote } from "../utils/encryption";
+import { mapHeliusTransaction } from "../utils/transactionMapper";
+import { useAuthorization } from "../utils/useAuthorization";
 
 export function TransactionDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "TransactionDetail">>();
@@ -58,6 +60,20 @@ export function TransactionDetailScreen() {
   const [notarizing, setNotarizing] = useState(false);
   const { show, hide, toast } = useToast();
   const { getKeypair, deriving } = useEncryption();
+
+  const { selectedAccount } = useAuthorization();
+  const walletAddress = selectedAccount?.publicKey?.toString() ?? "";
+
+  const isOwner =
+    tx?.feePayer === walletAddress ||
+    tx?.nativeTransfers?.some(
+      (t: any) =>
+        t.fromUserAccount === walletAddress ||
+        t.toUserAccount === walletAddress,
+    );
+  const personalizedDescription = tx
+    ? mapHeliusTransaction(tx, walletAddress).description
+    : "";
 
   // populate state from fetched tx
   React.useEffect(() => {
@@ -104,27 +120,25 @@ export function TransactionDetailScreen() {
   };
 
   const handleNotarize = async () => {
-    if (!note) {
-      return;
-    }
+    if (!note) return;
     try {
       setNotarizing(true);
-      // compute SHA-256 hash of the note client-side
       const hash = await crypto.digestStringAsync(
         crypto.CryptoDigestAlgorithm.SHA256,
         note,
       );
+      console.log("Notarizing with hash:", hash);
+      console.log("txHash:", txHash);
       await notarize(txHash, hash);
+      show("Notarized successfully!", "success");
       queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
-      show("Notarized!!", "success");
-    } catch (err) {
-      console.error("Notarize failed:", err);
-      show("Failed to notarize", "error");
+    } catch (err: any) {
+      console.error("Notarize failed:", err?.response?.data);
+      show("Notarization failed", "error");
     } finally {
       setNotarizing(false);
     }
   };
-
   const handleAddViewer = async () => {
     if (!newViewerWallet.trim()) return;
     try {
@@ -246,7 +260,7 @@ export function TransactionDetailScreen() {
 
           {/* Description */}
           <Text style={styles.description}>
-            {tx.description || "Unknown Transaction"}
+            {personalizedDescription || "Unknown Transaction"}
           </Text>
           <Text style={styles.network}>Completed on Solana Mainnet-Beta</Text>
 
@@ -261,121 +275,135 @@ export function TransactionDetailScreen() {
               onPress={handleSolscan}
             />
           </View>
+          {isOwner && (
+            <>
+              {/* Category */}
+              <View style={styles.section}>
+                <CategorySelector selected={category} onSelect={setCategory} />
+              </View>
 
-          {/* Category */}
-          <View style={styles.section}>
-            <CategorySelector selected={category} onSelect={setCategory} />
-          </View>
+              {/* Note */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>TRANSACTION NOTE</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    value={note}
+                    multiline
+                    numberOfLines={4}
+                    placeholder="What was this for?"
+                    placeholderTextColor={colors.textMuted}
+                    onChangeText={setNote}
+                    style={styles.input}
+                    textAlignVertical="top"
+                  />
+                  <TouchableOpacity
+                    style={styles.editIcon}
+                    onPress={handleSaveNarration}
+                    disabled={saving}
+                  >
+                    <Edit3 size={16} color={colors.textMuted} />
+                    <Text style={styles.editIconText}>
+                      {saving ? "..." : "✎"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          {/* Note */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>TRANSACTION NOTE</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                value={note}
-                multiline
-                numberOfLines={4}
-                placeholder="What was this for?"
-                placeholderTextColor={colors.textMuted}
-                onChangeText={setNote}
-                style={styles.input}
-                textAlignVertical="top"
-              />
+              {/* Save button */}
+              {(note || category) && (
+                <PrimaryButton
+                  label={saving ? "Saving..." : "Save Note"}
+                  onPress={handleSaveNarration}
+                  loading={saving}
+                  variant="outlined"
+                />
+              )}
+
+              {/* Notarize */}
               <TouchableOpacity
-                style={styles.editIcon}
-                onPress={handleSaveNarration}
-                disabled={saving}
+                style={[
+                  styles.notarizeRow,
+                  isNotarized && { borderColor: colors.success + "40" },
+                ]}
+                onPress={handleNotarize}
+                activeOpacity={0.7}
+                disabled={notarizing || isNotarized || !note}
               >
-                <Edit3 size={16} color={colors.textMuted} />
-                <Text style={styles.editIconText}>{saving ? "..." : "✎"}</Text>
+                <View style={styles.notarizeLeft}>
+                  <View style={styles.notarizeIcon}>
+                    <Text style={styles.notarizeIconText}>🛡</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.notarizeTitle}>
+                      {isNotarized ? "Notarized ✓" : "Notarize"}
+                    </Text>
+                    <Text style={styles.notarizeSubtitle}>
+                      {isNotarized
+                        ? "Hash written on-chain"
+                        : "Write a tamper-proof hash on-chain"}
+                    </Text>
+                  </View>
+                </View>
+                {notarizing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={styles.chevron}>›</Text>
+                )}
               </TouchableOpacity>
-            </View>
-          </View>
 
-          {/* Save button */}
-          {(note || category) && (
-            <PrimaryButton
-              label={saving ? "Saving..." : "Save Note"}
-              onPress={handleSaveNarration}
-              loading={saving}
-              variant="outlined"
-            />
-          )}
+              {/* Viewers */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>VIEWERS</Text>
+                <View style={styles.viewersList}>
+                  {viewers.map((wallet) => (
+                    <ViewerRow
+                      key={wallet}
+                      walletAddress={wallet}
+                      onRemove={handleRemoveViewer}
+                    />
+                  ))}
+                </View>
 
-          {/* Notarize */}
-          <TouchableOpacity
-            style={[
-              styles.notarizeRow,
-              isNotarized && { borderColor: colors.success + "40" },
-            ]}
-            onPress={handleNotarize}
-            activeOpacity={0.7}
-            disabled={notarizing || isNotarized || !note}
-          >
-            <View style={styles.notarizeLeft}>
-              <View style={styles.notarizeIcon}>
-                <Text style={styles.notarizeIconText}>🛡</Text>
-              </View>
-              <View>
-                <Text style={styles.notarizeTitle}>
-                  {isNotarized ? "Notarized ✓" : "Notarize"}
-                </Text>
-                <Text style={styles.notarizeSubtitle}>
-                  {isNotarized
-                    ? "Hash written on-chain"
-                    : "Write a tamper-proof hash on-chain"}
-                </Text>
-              </View>
-            </View>
-            {notarizing ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Text style={styles.chevron}>›</Text>
-            )}
-          </TouchableOpacity>
+                {showViewerInput && (
+                  <View style={styles.viewerInputRow}>
+                    <TextInput
+                      value={newViewerWallet}
+                      onChangeText={setNewViewerWallet}
+                      placeholder="Wallet address"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.viewerInput}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={styles.viewerAddConfirm}
+                      onPress={handleAddViewer}
+                    >
+                      <Text style={styles.viewerAddConfirmText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
-          {/* Viewers */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>VIEWERS</Text>
-            <View style={styles.viewersList}>
-              {viewers.map((wallet) => (
-                <ViewerRow
-                  key={wallet}
-                  walletAddress={wallet}
-                  onRemove={handleRemoveViewer}
-                />
-              ))}
-            </View>
-
-            {showViewerInput && (
-              <View style={styles.viewerInputRow}>
-                <TextInput
-                  value={newViewerWallet}
-                  onChangeText={setNewViewerWallet}
-                  placeholder="Wallet address"
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.viewerInput}
-                  autoCapitalize="none"
-                />
                 <TouchableOpacity
-                  style={styles.viewerAddConfirm}
-                  onPress={handleAddViewer}
+                  style={styles.addViewerButton}
+                  onPress={() => setShowViewerInput(!showViewerInput)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.viewerAddConfirmText}>Add</Text>
+                  <Text style={styles.addViewerText}>
+                    {showViewerInput ? "Cancel" : "+ Add Viewer"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            )}
-
-            <TouchableOpacity
-              style={styles.addViewerButton}
-              onPress={() => setShowViewerInput(!showViewerInput)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.addViewerText}>
-                {showViewerInput ? "Cancel" : "+ Add Viewer"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </>
+          )}
+          {/* For shared note */}
+          {!isOwner && tx?.narration && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>SHARED NOTE</Text>
+              <View style={styles.inputContainer}>
+                <Text style={styles.sharedNote}>{note || "Encrypted"}</Text>
+              </View>
+            </View>
+          )}
 
           {/* View on Solscan */}
           <TouchableOpacity
@@ -601,11 +629,18 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: borderRadius.full,
     marginLeft: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   notarizedBadgeText: {
     color: colors.success,
     fontSize: typography.xs,
     fontWeight: "600",
+  },
+  sharedNote: {
+    color: colors.textSecondary,
+    fontSize: typography.md,
+    fontStyle: "italic",
   },
   viewerInputRow: {
     flexDirection: "row",

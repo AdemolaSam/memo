@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigation } from "@react-navigation/native";
@@ -90,8 +91,11 @@ export function HomeScreen() {
     data,
     isLoading: txLoading,
     refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useTransactions(isAuthenticated);
-  const transactions = data?.transactions ?? [];
+  const transactions = data?.pages?.flatMap((page) => page.transactions) ?? [];
 
   //portfolio data
   const { data: portfolio } = usePortfolio(isAuthenticated);
@@ -124,6 +128,20 @@ export function HomeScreen() {
             onPress={handleTransactionPress}
           />
         )}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator
+              color={colors.primary}
+              style={{ paddingVertical: spacing.md }}
+            />
+          ) : null
+        }
         ListHeaderComponent={
           <>
             {/* Top Bar */}
@@ -136,9 +154,8 @@ export function HomeScreen() {
               </View>
               <View style={styles.topBarRight}>
                 <TouchableOpacity style={styles.iconButton}>
-                  <Bell size={20} color={colors.textSecondary} />
+                  <Bell size={20} stroke={colors.textSecondary} />
                 </TouchableOpacity>
-
                 {isAuthenticated ? (
                   <TouchableOpacity
                     style={styles.avatarButton}
@@ -150,14 +167,13 @@ export function HomeScreen() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.avatarButton} onPress={login}>
-                    <Wallet size={16} color={colors.textPrimary} />
+                    <Wallet size={16} stroke={colors.textPrimary} />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
 
             {!isAuthenticated ? (
-              /* Not authenticated — show connect prompt */
               <View style={styles.connectContainer}>
                 <Text style={styles.connectTitle}>Welcome to Memo</Text>
                 <Text style={styles.connectSubtitle}>
@@ -184,19 +200,20 @@ export function HomeScreen() {
                 )}
               </View>
             ) : (
-              /* Authenticated — show portfolio and journal */
               <>
                 <View style={styles.portfolioCard}>
                   <Text style={styles.portfolioLabel}>
                     EST. PORTFOLIO VALUE
                   </Text>
                   <View style={styles.portfolioRow}>
-                    <Text style={styles.portfolioValue}>
-                      ${portfolio?.usdValue ?? "0.00"}
-                    </Text>
-                    <Text style={styles.portfolioSol}>
-                      {portfolio?.solBalance ?? "0.0000"} SOL
-                    </Text>
+                    <View>
+                      <Text style={styles.portfolioValue}>
+                        ${portfolio?.usdValue ?? "0.00"}
+                      </Text>
+                      <Text style={styles.portfolioSol}>
+                        {portfolio?.solBalance ?? "0.0000"} SOL
+                      </Text>
+                    </View>
                     <View style={styles.changeBadge}>
                       <Text style={styles.changeText}>
                         1 SOL = ${portfolio?.solPrice ?? "0.00"}
@@ -232,6 +249,15 @@ export function HomeScreen() {
             </Text>
           </View>
         }
+      />
+
+      <NarrationPrompt
+        visible={showNarrationPrompt}
+        onDismiss={() => setShowNarrationPrompt(false)}
+        txDescription={promptDescription}
+        onSave={(note, category, notarize) => {
+          console.log("Saved:", { note, category, notarize });
+        }}
       />
 
       {/* <NarrationPrompt

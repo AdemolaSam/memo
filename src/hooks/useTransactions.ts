@@ -1,31 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchTransactions } from "../services/transactionApi";
-import { useAuthorization } from "../utils/useAuthorization";
 import { mapHeliusTransaction } from "../utils/transactionMapper";
+import { useAuthorization } from "../utils/useAuthorization";
 
 export function useTransactions(isAuthenticated: boolean) {
   const { selectedAccount } = useAuthorization();
   const walletAddress = selectedAccount?.publicKey?.toString() ?? "";
 
-  console.log(
-    "useTransactions — wallet:",
-    walletAddress,
-    "auth:",
-    isAuthenticated,
-  );
-
-  return useQuery({
-    queryKey: ["transactions", walletAddress], // include wallet in key
-    queryFn: async () => {
-      console.log("Fetching for wallet:", walletAddress);
-      const data = await fetchTransactions(20);
-      //   console.log("Raw response:", JSON.stringify(data));
+  return useInfiniteQuery({
+    queryKey: ["transactions", walletAddress],
+    queryFn: async ({ pageParam }) => {
+      const data = await fetchTransactions(20, pageParam);
       const mapped = (data.transactions ?? []).map((tx: any) =>
         mapHeliusTransaction(tx, walletAddress),
       );
-      return { transactions: mapped, paginationToken: data.paginationToken };
+      return {
+        transactions: mapped,
+        paginationToken: data.paginationToken,
+      };
     },
-    enabled: isAuthenticated && walletAddress.length > 0, // both required
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.paginationToken ?? undefined,
+    enabled: isAuthenticated && walletAddress.length > 0,
     staleTime: 30000,
   });
 }
