@@ -38,6 +38,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import * as crypto from "expo-crypto";
 import { Toast, useToast } from "../components/Toast";
+import { useEncryption } from "../hooks/useEncryption";
+import { encryptNote, decryptNote } from "../utils/encryption";
 
 export function TransactionDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "TransactionDetail">>();
@@ -55,13 +57,27 @@ export function TransactionDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [notarizing, setNotarizing] = useState(false);
   const { show, hide, toast } = useToast();
+  const { getKeypair, deriving } = useEncryption();
 
   // populate state from fetched tx
   React.useEffect(() => {
     if (tx) {
-      setNote(tx.narration?.encryptedText ?? "");
-      setCategory(tx.narration?.category ?? "");
-      setViewers(tx.narration?.viewers?.map((v: any) => v.viewerWallet) ?? []);
+      const loadNote = async () => {
+        if (tx.narration?.encryptedText) {
+          const keypair = await getKeypair();
+          const decrypted = decryptNote(
+            tx.narration.encryptedText,
+            keypair.publicKey,
+            keypair.secretKey,
+          );
+          setNote(decrypted ?? "");
+        }
+        setCategory(tx.narration?.category ?? "");
+        setViewers(
+          tx.narration?.viewers?.map((v: any) => v.viewerWallet) ?? [],
+        );
+      };
+      loadNote();
     }
   }, [tx]);
 
@@ -69,17 +85,19 @@ export function TransactionDetailScreen() {
     if (!note && !category) return;
     try {
       setSaving(true);
+      const keypair = await getKeypair();
+      const encrypted = encryptNote(note, keypair.publicKey, keypair.secretKey);
       if (tx?.narration) {
-        await updateNarration(txHash, note, category);
+        await updateNarration(txHash, encrypted, category);
       } else {
-        await saveNarration(txHash, note, category);
+        await saveNarration(txHash, encrypted, category);
       }
       queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      show("Narration Added!", "success");
+      show("Note saved!", "success");
     } catch (err) {
       console.error("Save narration failed:", err);
-      show("Failed to save narration", "error");
+      show("Failed to save note", "error");
     } finally {
       setSaving(false);
     }

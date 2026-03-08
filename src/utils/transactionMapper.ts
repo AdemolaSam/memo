@@ -1,4 +1,5 @@
 import { Transaction, TransactionType } from "../components/TransactionCard";
+import { useAuthorization } from "../utils/useAuthorization";
 
 function getTransactionType(heliusTx: any): TransactionType {
   const type = heliusTx.type?.toUpperCase();
@@ -18,46 +19,67 @@ function getTransactionType(heliusTx: any): TransactionType {
   }
 }
 
+function shortenAddress(address: string): string {
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
+function personalizeDescription(heliusTx: any, walletAddress: string): string {
+  const description = heliusTx.description?.trim();
+  const transfer = heliusTx.nativeTransfers?.[0];
+
+  if (!description && !transfer) return "Unknown Transaction";
+
+  const isIncoming = transfer?.toUserAccount === walletAddress;
+  const counterparty = isIncoming
+    ? transfer?.fromUserAccount
+    : transfer?.toUserAccount;
+
+  const shortCounterparty = counterparty ? shortenAddress(counterparty) : null;
+  const solAmount = transfer?.amount
+    ? (transfer.amount / 1e9).toFixed(4)
+    : null;
+
+  // build personalized description
+  if (heliusTx.type === "TRANSFER" && solAmount && shortCounterparty) {
+    return isIncoming
+      ? `Received ${solAmount} SOL from ${shortCounterparty}`
+      : `Sent ${solAmount} SOL to ${shortCounterparty}`;
+  }
+
+  if (heliusTx.type === "SWAP") {
+    // Helius description for swaps is already good — just shorten addresses
+    return description
+      ? description.replace(/[1-9A-HJ-NP-Za-km-z]{32,44}/g, (addr: string) =>
+          addr === walletAddress ? "You" : shortenAddress(addr),
+        )
+      : "Token Swap";
+  }
+
+  if (heliusTx.type === "NFT_MINT") return "Minted an NFT";
+  if (heliusTx.type === "NFT_SALE") return "NFT Sale";
+  if (heliusTx.type === "STAKE") return "Staked SOL";
+
+  // fallback — shorten addresses in Helius description and replace wallet with "You"
+  if (description) {
+    return description.replace(
+      /[1-9A-HJ-NP-Za-km-z]{32,44}/g,
+      (addr: string) => (addr === walletAddress ? "You" : shortenAddress(addr)),
+    );
+  }
+
+  return "Transaction";
+}
+
 function getAmountUsd(heliusTx: any): string {
   const lamports = heliusTx.nativeTransfers?.[0]?.amount ?? 0;
   const sol = lamports / 1e9;
-  return `$${(sol * 20).toFixed(2)}`; // rough SOL price — replace with real price later
+  // rough SOL price — replace with real price from portfolio hook later
+  return `$${(sol * 150).toFixed(2)}`;
 }
 
 function isIncoming(heliusTx: any, walletAddress: string): boolean {
   const transfer = heliusTx.nativeTransfers?.[0];
   return transfer?.toUserAccount === walletAddress;
-}
-
-function shortenAddress(address: string): string {
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
-}
-
-function getDescription(heliusTx: any, walletAddress: string): string {
-  // Helius already provides human-readable descriptions
-  if (heliusTx.description && heliusTx.description.trim() !== "") {
-    // shorten any wallet addresses in the description
-    return heliusTx.description.replace(
-      /[1-9A-HJ-NP-Za-km-z]{32,44}/g,
-      (addr: string) => shortenAddress(addr),
-    );
-  }
-
-  const type = heliusTx.type?.toUpperCase();
-  switch (type) {
-    case "TRANSFER":
-      return "SOL Transfer";
-    case "SWAP":
-      return "Token Swap";
-    case "NFT_MINT":
-      return "NFT Mint";
-    case "NFT_SALE":
-      return "NFT Sale";
-    case "STAKE":
-      return "Stake SOL";
-    default:
-      return "Transaction";
-  }
 }
 
 export function mapHeliusTransaction(
@@ -67,7 +89,7 @@ export function mapHeliusTransaction(
   return {
     txHash: heliusTx.signature,
     type: getTransactionType(heliusTx),
-    description: getDescription(heliusTx, walletAddress),
+    description: personalizeDescription(heliusTx, walletAddress),
     amount: `${((heliusTx.nativeTransfers?.[0]?.amount ?? 0) / 1e9).toFixed(4)} SOL`,
     amountUsd: getAmountUsd(heliusTx),
     isIncoming: isIncoming(heliusTx, walletAddress),

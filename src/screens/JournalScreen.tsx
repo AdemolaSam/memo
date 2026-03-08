@@ -15,6 +15,7 @@ import {
   Calendar,
   Grid,
   CheckSquare,
+  ArrowLeft,
 } from "lucide-react-native";
 
 import { useNavigation } from "@react-navigation/native";
@@ -118,7 +119,7 @@ export function JournalScreen() {
             style={styles.backButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Journal</Text>
         </View>
@@ -228,11 +229,11 @@ export function JournalScreen() {
         </View>
         <PrimaryButton
           label={
-            exporting ? "Exporting..." : `Export ${totalCount} Transactions`
+            exporting ? "Exporting..." : `Export ${totalCount} Transaction(s)`
           }
           onPress={handleExport}
           loading={exporting}
-          icon={<Text style={{ color: colors.textPrimary }}>↓</Text>}
+          icon={<Download size={14} color={colors.textPrimary} />}
         />
       </View>
     </SafeAreaView>
@@ -292,6 +293,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   exportButtonText: {
     color: colors.textPrimary,

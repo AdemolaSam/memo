@@ -68,3 +68,8 @@ export async function exportTransactions() {
   });
   return response.data;
 }
+
+export async function fetchPortfolioValue() {
+  const response = await api.get(`/transactions/portfolio`);
+  return response.data;
+}

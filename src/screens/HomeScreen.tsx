@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Bell, Settings, ArrowUpRight, Wallet } from "lucide-react-native";
+import { usePortfolio } from "../hooks/usePortfolio";
 
 import {
   View,
@@ -91,6 +92,9 @@ export function HomeScreen() {
     refetch,
   } = useTransactions(isAuthenticated);
   const transactions = data?.transactions ?? [];
+
+  //portfolio data
+  const { data: portfolio } = usePortfolio(isAuthenticated);
 
   const handleTransactionPress = useCallback(
     (txHash: string) => {
@@ -187,9 +191,16 @@ export function HomeScreen() {
                     EST. PORTFOLIO VALUE
                   </Text>
                   <View style={styles.portfolioRow}>
-                    <Text style={styles.portfolioValue}>$12,450.00</Text>
+                    <Text style={styles.portfolioValue}>
+                      ${portfolio?.usdValue ?? "0.00"}
+                    </Text>
+                    <Text style={styles.portfolioSol}>
+                      {portfolio?.solBalance ?? "0.0000"} SOL
+                    </Text>
                     <View style={styles.changeBadge}>
-                      <Text style={styles.changeText}>↑ 2.4%</Text>
+                      <Text style={styles.changeText}>
+                        1 SOL = ${portfolio?.solPrice ?? "0.00"}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -336,6 +347,11 @@ const styles = StyleSheet.create({
     fontSize: typography.xxxl,
     color: colors.textPrimary,
     fontWeight: "800",
+  },
+  portfolioSol: {
+    color: colors.textPrimary + "CC",
+    fontSize: typography.sm,
+    fontWeight: "500",
   },
   changeBadge: {
     backgroundColor: colors.textPrimary + "20",

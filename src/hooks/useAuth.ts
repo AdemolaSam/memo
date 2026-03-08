@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useMobileWallet } from "../utils/useMobileWallet";
 import { useAuthorization } from "../utils/useAuthorization";
+import { clearCachedKeypair } from "../utils/encryption";
 import {
   getChallenge,
   verifySignature,
@@ -100,6 +101,7 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await clearToken();
+    clearCachedKeypair();
     await disconnect();
     setAuthState("idle");
   }, [disconnect]);
