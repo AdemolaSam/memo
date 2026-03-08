@@ -1,26 +1,4 @@
-# Solana Mobile Expo Template
-
-This template is a ready-to-go Android Expo dApp that offers:
-
-- Solana libraries: `web3.js`, Mobile Wallet Adapter, and `spl-token`.
-- Required polyfills like `crypto` and `Buffer` configured.
-- Pre-built React UI and re-usable hooks and code patterns like `useMobileWallet`.
-
-**This is only fully functional on Android.**
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="./screenshots/screenshot1.png" alt="Scaffold dApp Screenshot 1" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot2.png" alt="Scaffold dApp Screenshot 2" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot3.png" alt="Scaffold dApp Screenshot 3" width=300 />
-    </td>
-  </tr>
-</table>
+# Memo — Solana Transaction Journal
 
 ## Download & Test
 
@@ -31,24 +9,6 @@ This template is a ready-to-go Android Expo dApp that offers:
 - Android device with Phantom wallet installed
 - Enable "Install from unknown sources" in Android settings
 - Solana mainnet wallet with some transaction history
-
-## Tech Stack
-
-| Library               | Category          | Version | Description                                           |
-| --------------------- | ----------------- | ------- | ----------------------------------------------------- |
-| React Native          | Mobile Framework  | v0.76   | The best cross-platform mobile framework              |
-| Expo                  | SDK               | v52     | Allows (optional) Expo modules                        |
-| React                 | UI Framework      | v18.3   | The most popular UI framework in the world            |
-| Mobile Wallet Adapter | SDK               | v2.1    | Connect and request signing from mobile wallet apps   |
-| Solana web3.js        | SDK               | v1.78   | General Solana library for transactions and RPCs      |
-| spl-token             | SDK               | v0.4    | Library for building with Solana SPL tokens           |
-| React Native Paper    | Component Library | v5.12   | Production-ready components following Material Design |
-| React Navigation      | Navigation        | v6      | Performant and consistent navigation framework        |
-| React Query           | State management  | v5.24   | Async query management                                |
-| TypeScript            | Language          | v5      | Static typechecking                                   |
-| AsyncStorage          | Persistence       | v1.23   | State persistence                                     |
-
-# Memo — Solana Transaction Journal
 
 > **Solana Mobile Monolith Hackathon Submission**
 
@@ -74,6 +34,20 @@ Memo sits on top of your Solana wallet and gives every transaction a human layer
 - **Push notifications** — get prompted to annotate immediately after a transaction lands
 
 ---
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="./screenshots/screenshot1.png" alt="Scaffold dApp Screenshot 1" width=300 />
+    </td>
+    <td align="center">
+      <img src="./screenshots/screenshot2.png" alt="Scaffold dApp Screenshot 2" width=300 />
+    </td>
+    <td align="center">
+      <img src="./screenshots/screenshot3.png" alt="Scaffold dApp Screenshot 3" width=300 />
+    </td>
+  </tr>
+</table>
 
 ## Architecture
 
