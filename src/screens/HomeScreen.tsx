@@ -210,9 +210,16 @@ export function HomeScreen() {
                       <Text style={styles.portfolioValue}>
                         ${portfolio?.usdValue ?? "0.00"}
                       </Text>
-                      <Text style={styles.portfolioSol}>
-                        {portfolio?.solBalance ?? "0.0000"} SOL
-                      </Text>
+                      <View style={styles.portfolioBreakdown}>
+                        <Text style={styles.portfolioSol}>
+                          {portfolio?.solBalance ?? "0.0000"} SOL
+                        </Text>
+                        {parseFloat(portfolio?.usdcBalance ?? "0") > 0 && (
+                          <Text style={styles.portfolioSol}>
+                            · {portfolio?.usdcBalance} USDC
+                          </Text>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.changeBadge}>
                       <Text style={styles.changeText}>
@@ -220,13 +227,6 @@ export function HomeScreen() {
                       </Text>
                     </View>
                   </View>
-                </View>
-
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>JOURNAL ACTIVITY</Text>
-                  <TouchableOpacity>
-                    <Text style={styles.viewAll}>View All ›</Text>
-                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -378,6 +378,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary + "CC",
     fontSize: typography.sm,
     fontWeight: "500",
+  },
+  portfolioBreakdown: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginTop: 2,
   },
   changeBadge: {
     backgroundColor: colors.textPrimary + "20",

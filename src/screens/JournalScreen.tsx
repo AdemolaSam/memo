@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,8 @@ import { exportTransactions } from "../services/transactionApi";
 import { RootStackParamList } from "../types/navigation";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { useEncryption } from "../hooks/useEncryption";
+import { decryptNote } from "../utils/encryption";
 
 const DATE_FILTERS = [
   "Last 7 Days",
@@ -55,9 +57,11 @@ export function JournalScreen() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const { getKeypair } = useEncryption();
+  const [decryptedSections, setDecryptedSections] = useState<any[]>([]);
+
   const filteredSections = useMemo(() => {
-    const sections = data?.sections ?? [];
-    return sections
+    return decryptedSections
       .map((section) => ({
         ...section,
         data: section.data.filter((tx: JournaledTransaction) => {
@@ -71,12 +75,34 @@ export function JournalScreen() {
         }),
       }))
       .filter((section) => section.data.length > 0);
-  }, [data, categoryFilter, verifiedOnly]);
+  }, [decryptedSections, categoryFilter, verifiedOnly]);
 
   const totalCount = filteredSections.reduce(
     (acc, s) => acc + s.data.length,
     0,
   );
+
+  useEffect(() => {
+    if (!data?.sections) return;
+
+    const decryptAll = async () => {
+      const keypair = await getKeypair();
+      const sections = data.sections.map((section: any) => ({
+        ...section,
+        data: section.data.map((tx: any) => ({
+          ...tx,
+          // replace encrypted note with decrypted text
+          note: tx.note
+            ? (decryptNote(tx.note, keypair.publicKey, keypair.secretKey) ??
+              tx.description)
+            : tx.description,
+        })),
+      }));
+      setDecryptedSections(sections);
+    };
+
+    decryptAll();
+  }, [data]);
 
   const handleExport = async () => {
     try {

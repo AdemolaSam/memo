@@ -19,6 +19,7 @@ import {
   Shield,
   CheckCircle,
   Edit3,
+  ArrowUpRight,
 } from "lucide-react-native";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { borderRadius, colors, spacing, typography } from "../theme";
@@ -422,7 +423,9 @@ export function TransactionDetailScreen() {
           <PrimaryButton
             label="Share Receipt"
             onPress={handleShareReceipt}
-            icon={<Text style={{ color: colors.textPrimary }}>↗</Text>}
+            icon={
+              <ArrowUpRight size={typography.lg} color={colors.textPrimary} />
+            }
           />
         </View>
       </SafeAreaView>

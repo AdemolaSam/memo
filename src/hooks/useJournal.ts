@@ -31,8 +31,8 @@ async function fetchNarrations() {
           day: "numeric",
           year: "numeric",
         }),
-        monthKey, // attach for grouping
-        note: tx.narration?.encryptedText ?? "",
+        monthKey,
+        note: undefined, // don't pass encrypted text as note
         description: tx.description ?? "Unknown Transaction",
       };
     });
