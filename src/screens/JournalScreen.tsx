@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from "react-native";
 import {
   Search,
@@ -51,7 +52,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export function JournalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { isAuthenticated } = useAuth();
-  const { data, isLoading } = useJournal(isAuthenticated);
+  const { data, isLoading, refetch } = useJournal(isAuthenticated);
   const [dateFilter, setDateFilter] = useState("Last 30 Days");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -59,6 +60,7 @@ export function JournalScreen() {
 
   const { getKeypair } = useEncryption();
   const [decryptedSections, setDecryptedSections] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const filteredSections = useMemo(() => {
     return decryptedSections
@@ -82,6 +84,12 @@ export function JournalScreen() {
     0,
   );
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
     if (!data?.sections) return;
 
@@ -92,6 +100,7 @@ export function JournalScreen() {
         data: section.data.map((tx: any) => ({
           ...tx,
           // replace encrypted note with decrypted text
+
           note: tx.note
             ? (decryptNote(tx.note, keypair.publicKey, keypair.secretKey) ??
               tx.description)
@@ -220,6 +229,13 @@ export function JournalScreen() {
         <SectionList
           sections={filteredSections}
           keyExtractor={(item) => item.txHash}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
           renderItem={({ item }) => (
             <JournalRow
               transaction={item}

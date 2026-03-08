@@ -25,6 +25,10 @@ import { NarrationPrompt } from "./NarrationPromptScreen";
 import { useTransactions } from "../hooks/useTransactions";
 import PrimaryButton from "../components/PrimaryButton";
 import * as Notifications from "expo-notifications";
+import { saveNarration, updateNarration } from "../services/transactionApi";
+import { useEncryption } from "../hooks/useEncryption";
+import { encryptNote } from "../utils/encryption";
+import { useQueryClient } from "@tanstack/react-query";
 
 // notification handler configuration
 Notifications.setNotificationHandler({
@@ -56,6 +60,9 @@ export function HomeScreen() {
     setAuthState,
   } = useAuth();
 
+  const { getKeypair } = useEncryption();
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     const init = async () => {
       const hasToken = await checkExistingAuth();
@@ -67,21 +74,58 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    // handle notification tap — open NarrationPrompt
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
+        console.log("Notification tapped:", data);
         if (data?.screen === "NarrationPrompt" && data?.txHash) {
-          setPromptTxHash(data.txHash);
-          setPromptDescription(data.description ?? "");
-          setShowNarrationPrompt(true);
+          // small delay to ensure component is mounted
+          setTimeout(() => {
+            setPromptTxHash(data.txHash as string);
+            setPromptDescription((data.description as string) ?? "");
+            setShowNarrationPrompt(true);
+          }, 500);
+        }
+      },
+    );
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // handle notification received while app is in foreground
+    const foregroundSub = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const data = notification.request.content.data;
+        console.log("Notification received in foreground:", data);
+        if (data?.screen === "NarrationPrompt" && data?.txHash) {
+          setTimeout(() => {
+            setPromptTxHash(data.txHash as string);
+            setPromptDescription((data.description as string) ?? "");
+            setShowNarrationPrompt(true);
+          }, 500);
         }
       },
     );
 
-    return () => subscription.remove();
+    return () => foregroundSub.remove();
   }, []);
 
+  useEffect(() => {
+    const checkInitialNotification = async () => {
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (response) {
+        const data = response.notification.request.content.data;
+        if (data?.screen === "NarrationPrompt" && data?.txHash) {
+          setTimeout(() => {
+            setPromptTxHash(data.txHash as string);
+            setPromptDescription((data.description as string) ?? "");
+            setShowNarrationPrompt(true);
+          }, 1000);
+        }
+      }
+    };
+    checkInitialNotification();
+  }, []);
   //TODO - WILL REMOVE
   const handleLogin = async () => {
     console.log("Login button pressed");
@@ -117,6 +161,23 @@ export function HomeScreen() {
   const walletAddress = selectedAccount?.publicKey?.toString();
 
   const [showNarrationPrompt, setShowNarrationPrompt] = useState(false);
+
+  const handleNarrationSave = async (
+    note: string,
+    category: string,
+    shouldNotarize: boolean,
+  ) => {
+    if (!promptTxHash) return;
+    try {
+      const keypair = await getKeypair();
+      const encrypted = encryptNote(note, keypair.publicKey, keypair.secretKey);
+      await saveNarration(promptTxHash, encrypted, category);
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      console.log("Narration saved from prompt");
+    } catch (err) {
+      console.error("Failed to save narration from prompt:", err);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -256,30 +317,13 @@ export function HomeScreen() {
 
       <NarrationPrompt
         visible={showNarrationPrompt}
-        onDismiss={() => setShowNarrationPrompt(false)}
+        onDismiss={() => {
+          setShowNarrationPrompt(false);
+          setPromptTxHash("");
+          setPromptDescription("");
+        }}
         txDescription={promptDescription}
-        onSave={(note, category, notarize) => {
-          console.log("Saved:", { note, category, notarize });
-        }}
-      />
-
-      {/* <NarrationPrompt
-        visible={showNarrationPrompt}
-        onDismiss={() => setShowNarrationPrompt(false)}
-        txDescription="You swapped 10.5 SOL for 2,500 USDC via Jupiter"
-        onSave={(note, category, notarize) => {
-          console.log("Saved:", { note, category, notarize });
-          // TODO: call backend API to save narration
-        }}
-      /> */}
-      <NarrationPrompt
-        visible={showNarrationPrompt}
-        onDismiss={() => setShowNarrationPrompt(false)}
-        txDescription={promptDescription}
-        onSave={(note, category, notarize) => {
-          console.log("Saved:", { note, category, notarize });
-          // TODO: wire to backend
-        }}
+        onSave={handleNarrationSave}
       />
     </SafeAreaView>
   );
