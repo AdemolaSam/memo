@@ -38,13 +38,16 @@ Memo sits on top of your Solana wallet and gives every transaction a human layer
 <table>
   <tr>
     <td align="center">
-      <img src="./screenshots/screenshot1.png" alt="Scaffold dApp Screenshot 1" width=300 />
+      <img src="./screenshots/screenshot1.jpg" alt="Scaffold dApp Screenshot 2" width=300 />
     </td>
     <td align="center">
-      <img src="./screenshots/screenshot2.png" alt="Scaffold dApp Screenshot 2" width=300 />
+      <img src="./screenshots/Screenshot_20260309_024717_memo.jpg" alt="Scaffold dApp Screenshot 1" width=300 />
     </td>
     <td align="center">
-      <img src="./screenshots/screenshot3.png" alt="Scaffold dApp Screenshot 3" width=300 />
+      <img src="./screenshots/Screenshot_20260309_024717_memo.jpg" alt="Scaffold dApp Screenshot 3" width=300 />
+    </td>
+    <td align="center">
+      <img src="./screenshots/Screenshot_20260309_024735_memo.jpg" alt="Scaffold dApp Screenshot 3" width=300 />
     </td>
   </tr>
 </table>
