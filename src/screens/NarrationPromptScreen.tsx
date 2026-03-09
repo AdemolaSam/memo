@@ -13,6 +13,7 @@ import { colors, spacing, typography, borderRadius } from "../theme";
 import CategorySelector from "../components/CategorySelector";
 import PrimaryButton from "../components/PrimaryButton";
 import AppModal from "../components/AppModal";
+import { useToast } from "../components/Toast";
 
 type Props = {
   visible: boolean;
@@ -30,15 +31,17 @@ export function NarrationPrompt({
   const [note, setNote] = useState("");
   const [category, setCategory] = useState<string>("");
 
+  const { show } = useToast();
+
   const isValid = note.trim().length > 0 && category.length > 0;
 
   const handleSaveOnly = () => {
     if (!note.trim()) {
-      Alert.alert("Note Required", "Please add a note before saving.");
+      show("Please add a note before saving", "warning");
       return;
     }
     if (!category) {
-      Alert.alert("Category Required", "Please select a category.");
+      show("Please select a category", "warning");
       return;
     }
     onSave(note, category, false);
@@ -47,11 +50,11 @@ export function NarrationPrompt({
 
   const handleSaveAndNotarize = () => {
     if (!note.trim()) {
-      Alert.alert("Note Required", "Please add a note before saving.");
+      show("Please add a note before saving", "warning");
       return;
     }
     if (!category) {
-      Alert.alert("Category Required", "Please select a category.");
+      show("Please select a category", "warning");
       return;
     }
     onSave(note, category, true);

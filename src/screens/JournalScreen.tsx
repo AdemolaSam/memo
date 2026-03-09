@@ -32,6 +32,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useEncryption } from "../hooks/useEncryption";
 import { decryptNote } from "../utils/encryption";
+import { useAuthorization } from "../utils/useAuthorization";
 
 const DATE_FILTERS = [
   "Last 7 Days",
@@ -52,7 +53,12 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export function JournalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { isAuthenticated } = useAuth();
-  const { data, isLoading, refetch } = useJournal(isAuthenticated);
+  const { selectedAccount } = useAuthorization();
+  const walletAddress = selectedAccount?.publicKey?.toString() ?? "";
+  const { data, isLoading, refetch } = useJournal(
+    isAuthenticated,
+    walletAddress,
+  );
   const [dateFilter, setDateFilter] = useState("Last 30 Days");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -109,6 +115,8 @@ export function JournalScreen() {
       }));
       setDecryptedSections(sections);
     };
+
+    console.log("First tx raw:", JSON.stringify(data.sections[0]?.data[0]));
 
     decryptAll();
   }, [data]);
@@ -337,6 +345,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: spacing.md,
   },
   exportButtonText: {
     color: colors.textPrimary,

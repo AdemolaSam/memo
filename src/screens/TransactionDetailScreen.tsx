@@ -99,7 +99,14 @@ export function TransactionDetailScreen() {
   }, [tx]);
 
   const handleSaveNarration = async () => {
-    if (!note && !category) return;
+    if (!note.trim()) {
+      show("Please add a note before saving", "warning");
+      return;
+    }
+    if (!category) {
+      show("Please select a category", "warning");
+      return;
+    }
     try {
       setSaving(true);
       const keypair = await getKeypair();
@@ -121,20 +128,28 @@ export function TransactionDetailScreen() {
   };
 
   const handleNotarize = async () => {
-    if (!note) return;
+    if (!note.trim()) {
+      show("Add a note before notarizing", "warning");
+      return;
+    }
+    if (!tx?.narration) {
+      show("Save your note first before notarizing", "warning");
+      return;
+    }
+    if (tx?.narration?.isNotarized) {
+      show("This narration is already notarized", "info");
+      return;
+    }
     try {
       setNotarizing(true);
       const hash = await crypto.digestStringAsync(
         crypto.CryptoDigestAlgorithm.SHA256,
         note,
       );
-      console.log("Notarizing with hash:", hash);
-      console.log("txHash:", txHash);
       await notarize(txHash, hash);
       show("Notarized successfully!", "success");
       queryClient.invalidateQueries({ queryKey: ["transaction", txHash] });
     } catch (err: any) {
-      console.error("Notarize failed:", err?.response?.data);
       show("Notarization failed", "error");
     } finally {
       setNotarizing(false);
@@ -149,7 +164,6 @@ export function TransactionDetailScreen() {
       setShowViewerInput(false);
       show("Viewer added", "success");
     } catch (err) {
-      console.error("Add viewer failed:", err);
       show("Failed to add viewer", "error");
     }
   };
@@ -160,7 +174,6 @@ export function TransactionDetailScreen() {
       setViewers((prev) => prev.filter((v) => v !== walletAddress));
       show("Viewer removed", "success");
     } catch (err) {
-      console.error("Remove viewer failed:", err);
       show("Failed to remove viewer", "error");
     }
   };
