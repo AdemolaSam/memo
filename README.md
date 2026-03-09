@@ -41,7 +41,7 @@ Memo sits on top of your Solana wallet and gives every transaction a human layer
       <img src="./screenshots/screenshot1.jpg" alt="Scaffold dApp Screenshot 2" width=300 />
     </td>
     <td align="center">
-      <img src="./screenshots/Screenshot_20260309_024717_memo.jpg" alt="Scaffold dApp Screenshot 1" width=300 />
+      <img src="./screenshots/Screenshot_20260309_024700_memo.jpg" alt="Scaffold dApp Screenshot 1" width=300 />
     </td>
     <td align="center">
       <img src="./screenshots/Screenshot_20260309_024717_memo.jpg" alt="Scaffold dApp Screenshot 3" width=300 />
@@ -56,7 +56,7 @@ Memo sits on top of your Solana wallet and gives every transaction a human layer
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  Mobile App (Expo)                   │
+│     Architecture             Mobile App (Expo)                   │
 │  React Native + Solana Mobile Stack + TanStack Query │
 └────────────────────┬────────────────────────────────┘
                      │ HTTPS + JWT
@@ -66,7 +66,7 @@ Memo sits on top of your Solana wallet and gives every transaction a human layer
 └──────┬──────────────────────┬───────────────────────┘
        │                      │
 ┌──────▼──────┐     ┌─────────▼──────────┐
-│  Helius API  │     │   Solana Mainnet   │
+│  Helius API  │     │   Solana Mainnet   │Architecture
 │ Transactions │     │   Memo Program     │
 │  + Webhooks  │     │  (Notarization)    │
 └─────────────┘     └────────────────────┘
