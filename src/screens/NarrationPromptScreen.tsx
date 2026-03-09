@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { colors, spacing, typography, borderRadius } from "../theme";
 import CategorySelector from "../components/CategorySelector";
@@ -29,16 +30,33 @@ export function NarrationPrompt({
   const [note, setNote] = useState("");
   const [category, setCategory] = useState<string>("");
 
+  const isValid = note.trim().length > 0 && category.length > 0;
+
   const handleSaveOnly = () => {
+    if (!note.trim()) {
+      Alert.alert("Note Required", "Please add a note before saving.");
+      return;
+    }
+    if (!category) {
+      Alert.alert("Category Required", "Please select a category.");
+      return;
+    }
     onSave(note, category, false);
     onDismiss();
   };
 
   const handleSaveAndNotarize = () => {
+    if (!note.trim()) {
+      Alert.alert("Note Required", "Please add a note before saving.");
+      return;
+    }
+    if (!category) {
+      Alert.alert("Category Required", "Please select a category.");
+      return;
+    }
     onSave(note, category, true);
     onDismiss();
   };
-
   const handleRemindLater = () => {
     onDismiss();
   };
@@ -84,12 +102,14 @@ export function NarrationPrompt({
             <PrimaryButton
               label="Save & Notarize"
               onPress={handleSaveAndNotarize}
+              disabled={!isValid}
               icon={<Shield size={16} color={colors.textPrimary} />}
             />
             <PrimaryButton
               label="Save Only"
               variant="outlined"
               onPress={handleSaveOnly}
+              disabled={!isValid}
               icon={<Save size={16} color={colors.primary} />}
             />
             <TouchableOpacity
