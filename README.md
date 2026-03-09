@@ -1,20 +1,20 @@
 # Memo — Solana Transaction Journal
 
+Memo is a personal finance journal for your Solana wallet. It lets you annotate, categorize, and notarize your on-chain transactions — turning raw blockchain data into a meaningful, auditable financial record.
+
+---
+
 ## Download & Test
 
 [Download APK (v1.0.0-beta)](https://github.com/AdemolaSam/memo/releases/latest)
+
+---
 
 **Requirements:**
 
 - Android device with Phantom wallet installed
 - Enable "Install from unknown sources" in Android settings
 - Solana mainnet wallet with some transaction history
-
-> **Solana Mobile Monolith Hackathon Submission**
-
-Memo is a personal finance journal for your Solana wallet. It lets you annotate, categorize, and notarize your on-chain transactions — turning raw blockchain data into a meaningful, auditable financial record.
-
----
 
 ## The Problem
 
