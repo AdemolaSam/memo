@@ -345,7 +345,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: spacing.md,
+    gap: spacing.sm,
+    alignItems: "center",
   },
   exportButtonText: {
     color: colors.textPrimary,
@@ -365,6 +366,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    alignItems: "center",
   },
   filterPillActive: {
     backgroundColor: colors.primary + "20",
